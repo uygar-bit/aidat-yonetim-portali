@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aidat & Daire Yönetim Portalı</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+    <div class="max-w-6xl mx-auto p-6">
+        <!-- Başlık -->
+        <header class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
+            <div>
+                <h1 class="text-3xl font-bold text-emerald-400">Aidat & Daire Yönetim Portalı</h1>
+                <p class="text-slate-400 text-sm mt-1">Tek Ekrandan Tüm Yönetim Ve Canlı Veritabanı Entegrasyonu</p>
+            </div>
+            <div id="connectionStatus" class="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Bağlanıyor...
+            </div>
+        </header>
+
+        <!-- Özet Kartları -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+                <p class="text-slate-400 text-xs font-medium uppercase tracking-wider">Toplam Aidat Tutarı</p>
+                <h3 id="statTotal" class="text-2xl font-bold text-white mt-1">₺0.00</h3>
+            </div>
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+                <p class="text-emerald-400 text-xs font-medium uppercase tracking-wider">Tahsil Edilen (Ödendi)</p>
+                <h3 id="statPaid" class="text-2xl font-bold text-emerald-400 mt-1">₺0.00</h3>
+            </div>
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+                <p class="text-rose-400 text-xs font-medium uppercase tracking-wider">Bekleyen (Ödenmedi)</p>
+                <h3 id="statUnpaid" class="text-2xl font-bold text-rose-400 mt-1">₺0.00</h3>
+            </div>
+        </div>
+
+        <!-- İşlem Paneli & Liste -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Sol Menü: Formlar -->
+            <div class="space-y-6">
+                <!-- 1. Form: Yeni Daire Ekleme -->
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                    <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <span>🏢</span> Yeni Daire Tanımla
+                    </h2>
+                    <form id="addApartmentForm" class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Blok Adı / No</label>
+                            <input type="text" id="inputBlockName" required placeholder="Örn: A veya 1" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Daire Numarası</label>
+                            <input type="number" id="inputApartmentNumber" required placeholder="Örn: 5" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg text-sm transition-colors mt-2">
+                            Daireyi Kaydet
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 2. Form: Yeni Aidat Ekleme -->
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                    <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <span>💰</span> Yeni Aidat Borcu Ekle
+                    </h2>
+                    <form id="addDueForm" class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Daire No / Blok</label>
+                            <select id="selectApartment" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="">Daire Seçin...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Kategori</label>
+                            <select id="selectCategory" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="">Kategori Seçin...</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Tutar (₺)</label>
+                                <input type="number" step="0.01" id="inputAmount" required placeholder="1250" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Son Ödeme</label>
+                                <input type="date" id="inputDueDate" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg text-sm transition-colors mt-2">
+                            Aidat Kaydı Oluştur
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Sağ Alan: Aidat Listesi -->
+            <div class="lg:col-span-2 bg-slate-800 p-6 rounded-xl border border-slate-700">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h2 class="text-lg font-bold text-white">Aidat Kayıtları</h2>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900/50 text-slate-400 text-xs uppercase border-b border-slate-700">
+                            <tr>
+                                <th class="p-3">Daire</th>
+                                <th class="p-3">Kategori</th>
+                                <th class="p-3">Tutar</th>
+                                <th class="p-3">Son Ödeme</th>
+                                <th class="p-3">Durum</th>
+                                <th class="p-3 text-right">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="duesTableBody" class="divide-y divide-slate-700/50">
+                            <tr>
+                                <td colspan="6" class="p-4 text-center text-slate-500">Veriler yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Supabase Bağlantısı
+        const SUPABASE_URL = "https://bulkwwxlaubodihzfbgt.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_eGCbRGTWKp2EzVItGHxoaw_upW7htR_";
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Uygulama Başlatma
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkConnection();
+            await loadApartmentsAndCategories();
+            await loadDuesData();
+        });
+
+        // Bağlantı Kontrolü
+        async function checkConnection() {
+            const statusEl = document.getElementById('connectionStatus');
+            try {
+                const { data, error } = await supabaseClient.from('dues_categories').select('id').limit(1);
+                if (error) throw error;
+                statusEl.className = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-2";
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Veritabanı Bağlı`;
+            } catch (err) {
+                statusEl.className = "bg-rose-500/10 text-rose-400 border border-rose-500/20 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-2";
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span> Bağlantı Hatası`;
+            }
+        }
+
+        // Daire ve Kategorileri Seçim Kutularına Yükle
+        async function loadApartmentsAndCategories() {
+            const { data: apartments } = await supabaseClient.from('apartments').select('id, block_name, apartment_number').order('block_name').order('apartment_number');
+            const selectApt = document.getElementById('selectApartment');
+            selectApt.innerHTML = '<option value="">Daire Seçin...</option>';
+            if (apartments) {
+                apartments.forEach(apt => {
+                    selectApt.innerHTML += `<option value="${apt.id}">Blok ${apt.block_name} - Daire ${apt.apartment_number}</option>`;
+                });
+            }
+
+            const { data: categories } = await supabaseClient.from('dues_categories').select('id, name');
+            const selectCat = document.getElementById('selectCategory');
+            selectCat.innerHTML = '<option value="">Kategori Seçin...</option>';
+            if (categories) {
+                categories.forEach(cat => {
+                    selectCat.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+                });
+            }
+        }
+
+        // Yeni Daire Ekleme Formu
+        document.getElementById('addApartmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const block_name = document.getElementById('inputBlockName').value.trim();
+            const apartment_number = document.getElementById('inputApartmentNumber').value;
+
+            const { error } = await supabaseClient.from('apartments').insert([{
+                block_name,
+                apartment_number
+            }]);
+
+            if (error) {
+                alert("Daire eklenirken hata: " + error.message);
+            } else {
+                alert("Daire başarıyla eklendi!");
+                document.getElementById('addApartmentForm').reset();
+                await loadApartmentsAndCategories();
+            }
+        });
+
+        // Aidat Listesini ve Özet Metrikleri Yükle
+        async function loadDuesData() {
+            const { data: dues, error } = await supabaseClient
+                .from('dues')
+                .select(`
+                    id, amount, due_date, status,
+                    apartments ( block_name, apartment_number ),
+                    dues_categories ( name )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Veri çekme hatası:", error);
+                return;
+            }
+
+            const tbody = document.getElementById('duesTableBody');
+            tbody.innerHTML = '';
+
+            let total = 0, paid = 0, unpaid = 0;
+
+            if (dues.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500">Henüz kaydedilmiş aidat bulunmuyor.</td></tr>`;
+            } else {
+                dues.forEach(item => {
+                    total += Number(item.amount);
+                    if (item.status === 'PAID') paid += Number(item.amount);
+                    else unpaid += Number(item.amount);
+
+                    const isPaid = item.status === 'PAID';
+                    const statusBadge = isPaid 
+                        ? `<span class="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded text-xs">Ödendi</span>`
+                        : `<span class="bg-rose-500/10 text-rose-400 px-2 py-1 rounded text-xs">Ödenmedi</span>`;
+
+                    const actionBtn = isPaid
+                        ? `<span class="text-xs text-slate-500">Tamamlandı</span>`
+                        : `<button onclick="markAsPaid(${item.id})" class="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-2.5 py-1 rounded text-xs transition-colors">Öde</button>`;
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-700/30">
+                            <td class="p-3 font-medium text-white">${item.apartments?.block_name || ''} Blok / D:${item.apartments?.apartment_number || ''}</td>
+                            <td class="p-3 text-slate-400">${item.dues_categories?.name || 'Genel'}</td>
+                            <td class="p-3 font-semibold text-white">₺${Number(item.amount).toFixed(2)}</td>
+                            <td class="p-3 text-slate-400">${item.due_date}</td>
+                            <td class="p-3">${statusBadge}</td>
+                            <td class="p-3 text-right">${actionBtn}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            document.getElementById('statTotal').innerText = `₺${total.toFixed(2)}`;
+            document.getElementById('statPaid').innerText = `₺${paid.toFixed(2)}`;
+            document.getElementById('statUnpaid').innerText = `₺${unpaid.toFixed(2)}`;
+        }
+
+        // Ödeme Durumunu Güncelle
+        async function markAsPaid(dueId) {
+            const { error } = await supabaseClient
+                .from('dues')
+                .update({ status: 'PAID' })
+                .eq('id', dueId);
+
+            if (error) {
+                alert("Ödeme güncellenirken hata oluştu: " + error.message);
+            } else {
+                await loadDuesData();
+            }
+        }
+
+        // Yeni Aidat Ekleme Formu
+        document.getElementById('addDueForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const apartment_id = document.getElementById('selectApartment').value;
+            const category_id = document.getElementById('selectCategory').value;
+            const amount = document.getElementById('inputAmount').value;
+            const due_date = document.getElementById('inputDueDate').value;
+
+            const now = new Date();
+            const period_month = now.getMonth() + 1;
+            const period_year = now.getFullYear();
+
+            const { error } = await supabaseClient.from('dues').insert([{
+                apartment_id,
+                category_id,
+                amount,
+                due_date,
+                period_month,
+                period_year,
+                status: 'UNPAID'
+            }]);
+
+            if (error) {
+                alert("Aidat eklenirken hata: " + error.message);
+            } else {
+                document.getElementById('addDueForm').reset();
+                await loadDuesData();
+            }
+        });
+    </script>
+</body>
+</html>
